@@ -1,0 +1,16 @@
+target/
+*.class
+*.log
+*.jar
+*.war
+*.ear
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(git -C \"C:/Users/SSDD/Desktop/SUPA-main\" status)",
+      "PowerShell(gh --version 2>$null)",
+      "PowerShell(git -C \"C:\\\\Users\\\\SSDD\\\\Desktop\\\\SUPA-main\" status 2>&1)",
+      "Bash(git config *)",
+      "Bash(git -C \"/c/Users/SSDD/Desktop/SUPA-main\" status)",
+      "Read(//c/Users/SSDD/Desktop//**)",
+      "Bash(mkdir -p \"/c/Users/SSDD/Desktop/ProyectoSupa\" && echo \"Carpeta creada\")",
+      "Bash(cp -r \"/c/Users/SSDD/Desktop/SUPA-main\" \"./ms-autenticacion\")",
+      "Bash(cp -r \"/c/Users/SSDD/Desktop/ms-catalogo\" \".\")",
+      "Bash(cp -r \"/c/Users/SSDD/Desktop/ms-carrito\" \".\")",
+      "Bash(cp -r \"/c/Users/SSDD/Desktop/ms-registro-venta\" \".\")",
+      "Bash(cp -r \"/c/Users/SSDD/Desktop/ms-resena\" \".\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\SSDD\\Desktop"
+    ]
+  }
+}
