@@ -39,6 +39,7 @@ public class SucursalService {
 
     public Sucursal guardar(Sucursal sucursal) {
         log.info("Guardando sucursal: {}", sucursal.getNombre());
+        sucursal.setActiva(true);
         Sucursal guardada = repository.save(sucursal);
         log.info("Sucursal guardada con id: {}", guardada.getId());
         return guardada;

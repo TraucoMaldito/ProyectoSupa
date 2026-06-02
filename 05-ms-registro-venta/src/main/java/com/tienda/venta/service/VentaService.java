@@ -61,10 +61,9 @@ public class VentaService {
             venta.getDetalles().add(detalle);
             total = total.add(item.getPrecioUnitario().multiply(BigDecimal.valueOf(item.getCantidad())));
 
-            restTemplate.patchForObject(
+            restTemplate.put(
                     catalogoUrl + "/productos/" + item.getProductoId() + "/stock?cantidad=" + item.getCantidad(),
-                    null,
-                    String.class
+                    null
             );
         }
 

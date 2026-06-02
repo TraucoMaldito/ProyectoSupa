@@ -35,6 +35,6 @@ public class Venta {
     @Column(nullable = false, length = 20)
     private String estado = "PENDIENTE";
 
-    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<DetalleVenta> detalles = new ArrayList<>();
 }

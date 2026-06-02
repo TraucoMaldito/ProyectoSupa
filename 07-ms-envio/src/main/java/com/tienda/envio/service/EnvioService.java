@@ -29,6 +29,9 @@ public class EnvioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ya existe un envio para esta venta");
         }
+        envio.setEstado("PREPARANDO");
+        envio.setFechaCreacion(java.time.LocalDateTime.now());
+        envio.setCodigoSeguimiento(java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         envio.setFechaEstimada(LocalDate.now().plusDays(5));
         Envio guardado = repository.save(envio);
         log.info("Envio creado con id: {}, codigo: {}", guardado.getId(), guardado.getCodigoSeguimiento());

@@ -50,6 +50,7 @@ public class ProductoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Categoria no encontrada"));
         producto.setCategoria(categoria);
+        producto.setActivo(true);
         ProductoDTO guardado = toDTO(productoRepository.save(producto));
         log.info("Producto guardado con id: {}", guardado.getId());
         return guardado;

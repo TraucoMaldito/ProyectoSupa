@@ -70,13 +70,15 @@ public class CarritoService {
                             ItemCarrito nuevo = new ItemCarrito();
                             nuevo.setCarrito(carrito);
                             nuevo.setProductoId(request.getProductoId());
+                            nuevo.setNombreProducto(producto.getNombre());
                             nuevo.setCantidad(request.getCantidad());
                             nuevo.setPrecioUnitario(producto.getPrecio());
                             itemRepository.save(nuevo);
+                            carrito.getItems().add(nuevo);
                         }
                 );
 
-        return carritoRepository.findById(carrito.getId()).orElseThrow();
+        return carrito;
     }
 
     public void eliminarItem(Integer itemId) {
@@ -103,4 +105,9 @@ public class CarritoService {
                     carritoRepository.save(c);
                 });
     }
+    public int contarItems(Integer clienteId) {
+    Carrito carrito = obtenerCarrito(clienteId);
+    return carrito.getItems().size();
+    }
+
 }

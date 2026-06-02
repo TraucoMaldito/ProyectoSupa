@@ -38,5 +38,10 @@ public class CarritoController {
     public ResponseEntity<String> vaciar(@PathVariable Integer clienteId) {
         service.vaciarCarrito(clienteId);
         return ResponseEntity.ok("Carrito vaciado");
+    } 
+
+    @GetMapping("/cliente/{clienteId}/total-items")
+      public ResponseEntity<Integer> totalItems(@PathVariable Integer clienteId) {
+      return ResponseEntity.ok(service.contarItems(clienteId));
     }
 }

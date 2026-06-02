@@ -37,6 +37,8 @@ public class DespachoService {
         log.info("Creando despacho para venta id: {}, sucursal id: {}", despacho.getVentaId(), despacho.getSucursalId());
         restTemplate.getForObject(ventaUrl + "/ventas/" + despacho.getVentaId(), Map.class);
         restTemplate.getForObject(sucursalUrl + "/sucursales/" + despacho.getSucursalId(), Map.class);
+        despacho.setEstado("EN_PREPARACION");
+        despacho.setFechaCreacion(java.time.LocalDateTime.now());
         Despacho guardado = repository.save(despacho);
         log.info("Despacho creado con id: {}", guardado.getId());
         return guardado;

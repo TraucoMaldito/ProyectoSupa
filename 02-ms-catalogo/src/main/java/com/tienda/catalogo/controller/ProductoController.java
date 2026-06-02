@@ -52,7 +52,7 @@ public class ProductoController {
         return ResponseEntity.ok("Producto desactivado correctamente");
     }
 
-    @PatchMapping("/{id}/stock")
+    @PutMapping("/{id}/stock")
     public ResponseEntity<String> reducirStock(@PathVariable Integer id,
                                                @RequestParam Integer cantidad) {
         service.reducirStock(id, cantidad);

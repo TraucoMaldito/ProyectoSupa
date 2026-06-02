@@ -34,6 +34,9 @@ public class CertificadoService {
         if ("DESPACHO".equals(certificado.getTipo())) {
             restTemplate.getForObject(despachoUrl + "/despachos/" + certificado.getReferenciaId(), Map.class);
         }
+        certificado.setEstado("VIGENTE");
+        certificado.setFechaEmision(java.time.LocalDateTime.now());
+        certificado.setCodigoVerificacion(java.util.UUID.randomUUID().toString().substring(0, 12).toUpperCase());
         Certificado guardado = repository.save(certificado);
         log.info("Certificado emitido con id: {}, codigo: {}", guardado.getId(), guardado.getCodigoVerificacion());
         return guardado;

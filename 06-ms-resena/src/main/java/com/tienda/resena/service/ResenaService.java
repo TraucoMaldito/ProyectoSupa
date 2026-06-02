@@ -57,6 +57,7 @@ public class ResenaService {
                     "Solo puedes resenir productos que hayas comprado");
         }
 
+        resena.setFecha(java.time.LocalDateTime.now());
         Resena guardada = repository.save(resena);
         log.info("Resena creada con id: {}", guardada.getId());
         return guardada;

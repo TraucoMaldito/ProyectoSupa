@@ -1,6 +1,7 @@
 package com.tienda.venta.controller;
 
 import com.tienda.venta.DTO.ActualizarEstadoRequest;
+import com.tienda.venta.DTO.ComprarRequest;
 import com.tienda.venta.model.Venta;
 import com.tienda.venta.service.VentaService;
 import jakarta.validation.Valid;
@@ -21,8 +22,8 @@ public class VentaController {
     }
 
     @PostMapping
-    public ResponseEntity<Venta> crear(@RequestParam Integer clienteId) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.crearVenta(clienteId));
+    public ResponseEntity<Venta> comprar(@Valid @RequestBody ComprarRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.crearVenta(request.getClienteId()));
     }
 
     @GetMapping

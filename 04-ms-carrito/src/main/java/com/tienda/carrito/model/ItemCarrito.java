@@ -1,5 +1,6 @@
 package com.tienda.carrito.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -20,6 +21,7 @@ public class ItemCarrito {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "carrito_id", nullable = false)
     private Carrito carrito;
@@ -27,6 +29,9 @@ public class ItemCarrito {
     @NotNull
     @Column(name = "producto_id", nullable = false)
     private Integer productoId;
+
+    @Column(name = "nombre_producto", length = 100)
+    private String nombreProducto;
 
     @NotNull
     @Min(value = 1, message = "La cantidad debe ser al menos 1")

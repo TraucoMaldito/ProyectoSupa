@@ -30,7 +30,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/productos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                         // Llamado internamente por ms-registro-venta al crear una venta
-                        .requestMatchers(HttpMethod.PATCH, "/productos/*/stock").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/productos/*/stock").permitAll()
                         .requestMatchers(HttpMethod.POST, "/productos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/productos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/productos/**").hasRole("ADMIN")
