@@ -30,7 +30,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/ventas").hasAnyRole("CLIENTE", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/ventas").hasAnyRole("ADMIN", "OPERADOR")
                         .requestMatchers(HttpMethod.PUT, "/ventas/*/estado").hasAnyRole("ADMIN", "OPERADOR")
-                        // Endpoints llamados internamente por ms-resena y ms-despacho (sin token)
                         .requestMatchers(HttpMethod.GET, "/ventas/cliente/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/ventas/**").permitAll()
                         .anyRequest().authenticated()

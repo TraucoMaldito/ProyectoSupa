@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/sucursales/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/sucursales/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/sucursales/**").hasRole("ADMIN")
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

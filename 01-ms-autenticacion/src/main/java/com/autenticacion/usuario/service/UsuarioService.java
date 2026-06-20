@@ -38,7 +38,7 @@ public class UsuarioService {
         if (usuario.getRol() == null) {
             usuario.setRol(Rol.CLIENTE);
         }
-        usuario.setContrasena(passwordEncoder.encode(usuario.getContrasena()));
+        usuario.setContraseña(passwordEncoder.encode(usuario.getContraseña()));
         listadoDTO creado = toDTO(repository.save(usuario));
         log.info("Usuario registrado exitosamente: {}", usuario.getEmail());
         return creado;

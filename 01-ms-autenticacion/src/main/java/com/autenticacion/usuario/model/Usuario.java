@@ -43,9 +43,9 @@ public class Usuario {
     @Column(nullable = false, length = 100)
     private String direccion;
 
-    @NotBlank(message = "La contrasena no puede quedar vacia")
+    @NotBlank(message = "La contraseña no puede quedar vacía")
     @Column(nullable = false)
-    private String contrasena;
+    private String contraseña;
 
     @NotNull(message = "El rol no puede quedar vacio")
     @Enumerated(EnumType.STRING)

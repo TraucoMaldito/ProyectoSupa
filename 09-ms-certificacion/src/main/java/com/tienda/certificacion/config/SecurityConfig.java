@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/certificados").hasAnyRole("OPERADOR", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/certificados/**").hasAnyRole("ADMIN", "OPERADOR")
                         .requestMatchers(HttpMethod.PUT, "/certificados/*/estado").hasRole("ADMIN")
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

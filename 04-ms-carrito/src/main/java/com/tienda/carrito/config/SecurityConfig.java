@@ -27,10 +27,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints llamados internamente por otros microservicios (sin token)
                         .requestMatchers(HttpMethod.GET, "/carrito/cliente/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/carrito/cliente/*/vaciar").permitAll()
-                        // Endpoints para usuarios autenticados
                         .requestMatchers("/carrito/**").hasAnyRole("CLIENTE", "ADMIN")
                         .anyRequest().authenticated()
                 )

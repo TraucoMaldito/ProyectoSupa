@@ -26,7 +26,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/despachos").hasAnyRole("OPERADOR", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/despachos/*/estado").hasAnyRole("OPERADOR", "ADMIN")
-                        // Llamado internamente por ms-certificacion (sin token)
                         .requestMatchers(HttpMethod.GET, "/despachos/**").permitAll()
                         .anyRequest().authenticated()
                 )

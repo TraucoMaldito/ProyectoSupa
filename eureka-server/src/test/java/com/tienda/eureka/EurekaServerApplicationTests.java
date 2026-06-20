@@ -1,13 +1,12 @@
-package com.autenticacion.usuario;
+package com.tienda.eureka;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class UsuarioApplicationTests {
+class EurekaServerApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {
+    }
 }

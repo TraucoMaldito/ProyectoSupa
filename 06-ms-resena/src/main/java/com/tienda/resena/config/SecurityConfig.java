@@ -28,9 +28,10 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/resenas/producto/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/resenas").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.POST, "/resenas").hasAnyRole("CLIENTE", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/resenas/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/resenas/cliente/**").hasAnyRole("CLIENTE", "ADMIN")
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

@@ -7,11 +7,16 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${jwt.secret}")
     private String secret;
@@ -33,6 +38,7 @@ public class JwtUtil {
             getClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
+            log.error("Error validando JWT: {}", e.getMessage());
             return false;
         }
     }
