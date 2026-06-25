@@ -1,0 +1,251 @@
+================================================================================
+                        GUÍA DE USO — PROYECTOSUPA
+              Sistema de Tienda con Microservicios Spring Boot
+================================================================================
+
+REQUISITOS PREVIOS
+──────────────────
+- Docker Desktop instalado y ejecutándose
+- Puerto 3306, 8080-8088, 8090, 8761 disponibles
+- NO se necesita Java, Maven ni MySQL instalados localmente
+
+────────────────────────────────────────────────────────────────────────────────
+1. LEVANTAR EL PROYECTO
+────────────────────────────────────────────────────────────────────────────────
+
+Abrir terminal en la raíz del proyecto (donde está docker-compose.yml) y ejecutar:
+
+    docker-compose up --build
+
+Esto construye y levanta automáticamente:
+  - MySQL 8 (base de datos)
+  - Eureka Server (registro de servicios)
+  - 9 Microservicios
+  - API Gateway
+
+El proyecto está listo cuando ves en los logs:
+  "Started [Nombre]Application in X seconds"
+
+Para detener:  docker-compose down
+Para resetear datos también: docker-compose down -v
+
+────────────────────────────────────────────────────────────────────────────────
+2. PUERTOS DE CADA SERVICIO
+────────────────────────────────────────────────────────────────────────────────
+
+  Servicio             Puerto   Ruta base
+  ─────────────────────────────────────────
+  Eureka Dashboard     8761     http://localhost:8761
+  API Gateway          8090     http://localhost:8090
+  ms-autenticacion     8080     /auth, /usuarios
+  ms-catalogo          8081     /categorias, /productos
+  ms-carrito           8082     /carrito
+  ms-registro-venta    8083     /ventas
+  ms-resena            8084     /resenas
+  ms-envio             8085     /envios
+  ms-sucursales        8086     /sucursales
+  ms-despacho          8087     /despachos
+  ms-certificacion     8088     /certificados
+
+────────────────────────────────────────────────────────────────────────────────
+3. SWAGGER UI (DOCUMENTACIÓN INTERACTIVA)
+────────────────────────────────────────────────────────────────────────────────
+
+Cada microservicio tiene su propio Swagger accesible en:
+
+  http://localhost:{puerto}/swagger-ui.html
+
+Ejemplos:
+  http://localhost:8080/swagger-ui.html  → Autenticación
+  http://localhost:8081/swagger-ui.html  → Catálogo
+  http://localhost:8082/swagger-ui.html  → Carrito
+  ... (mismo patrón para el resto)
+
+Para probar endpoints protegidos en Swagger:
+  1. Ejecuta POST /auth/login y copia el token
+  2. Clic en botón "Authorize" (candado arriba a la derecha)
+  3. Escribe:  Bearer eyJhbGci...  (el token completo)
+  4. Clic "Authorize" → ya puedes usar los endpoints protegidos
+
+────────────────────────────────────────────────────────────────────────────────
+4. CREDENCIALES DE PRUEBA (pre-cargadas automáticamente)
+────────────────────────────────────────────────────────────────────────────────
+
+  Rol        Email                    Contraseña
+  ────────────────────────────────────────────────
+  ADMIN      admin@tienda.com         Admin1234!
+  OPERADOR   operador@tienda.com      Operador1234!
+  CLIENTE    cliente@tienda.com       Cliente1234!
+
+Datos pre-cargados:
+  - 5 categorías de productos
+  - 10 productos
+  - 3 sucursales
+
+────────────────────────────────────────────────────────────────────────────────
+5. FLUJO COMPLETO DE PRUEBA (orden recomendado en Postman)
+────────────────────────────────────────────────────────────────────────────────
+
+PASO 1 — Obtener tokens
+  POST http://localhost:8080/auth/login
+  Body: {"email":"admin@tienda.com","contraseña":"Admin1234!"}
+  → Guarda el token como adminToken
+
+  POST http://localhost:8080/auth/login
+  Body: {"email":"cliente@tienda.com","contraseña":"Cliente1234!"}
+  → Guarda el token como clienteToken
+
+PASO 2 — Ver catálogo (sin token)
+  GET http://localhost:8081/productos
+  GET http://localhost:8081/categorias
+
+PASO 3 — Agregar al carrito (clienteToken)
+  POST http://localhost:8082/carrito/cliente/6/agregar
+  Body: {"productoId":1, "cantidad":2}
+  Auth: Bearer clienteToken
+
+PASO 4 — Ver carrito
+  GET http://localhost:8082/carrito/cliente/6
+  Auth: Bearer clienteToken
+
+PASO 5 — Crear venta (el carrito debe tener ítems)
+  POST http://localhost:8083/ventas
+  Body: {"clienteId":6}
+  Auth: Bearer clienteToken
+  → Guarda ventaId del response
+
+PASO 6 — Marcar venta como ENTREGADO (para poder reseñar)
+  PUT http://localhost:8083/ventas/{ventaId}/estado
+  Body: {"estado":"ENTREGADO"}
+  Auth: Bearer adminToken
+
+PASO 7 — Crear reseña
+  POST http://localhost:8084/resenas
+  Body: {"clienteId":6,"productoId":1,"calificacion":5,"comentario":"Excelente"}
+  Auth: Bearer clienteToken
+
+PASO 8 — Crear envío
+  POST http://localhost:8085/envios
+  Body: {"ventaId":{id},"clienteId":6,"direccionDestino":"Av. Test 123","fechaEstimada":"2026-07-15"}
+  Auth: Bearer adminToken
+
+PASO 9 — Crear despacho (necesita una sucursal existente, ID 1, 2 o 3)
+  POST http://localhost:8087/despachos
+  Body: {"ventaId":{id},"sucursalId":1,"operadorId":2,"observaciones":"Sin novedades"}
+  Auth: Bearer adminToken
+
+PASO 10 — Emitir certificado
+  POST http://localhost:8088/certificados
+  Body: {"tipo":"DESPACHO","referenciaId":{despachoId},"operadorId":2,"descripcion":"Verificado"}
+  Auth: Bearer adminToken
+  → Guarda codigoVerificacion del response
+
+PASO 11 — Verificar certificado (prueba de autenticidad)
+  GET http://localhost:8088/certificados/verificar/{codigoVerificacion}
+  Auth: Bearer adminToken
+
+────────────────────────────────────────────────────────────────────────────────
+6. ENDPOINTS COMPLETOS POR MICROSERVICIO
+────────────────────────────────────────────────────────────────────────────────
+
+  MS-AUTENTICACION (8080)
+  ───────────────────────
+  POST   /auth/login                     Sin auth
+  POST   /auth/registro                  Sin auth
+  GET    /usuarios                       ADMIN
+  POST   /usuarios/agregar               ADMIN
+  DELETE /usuarios/eliminar/{id}         ADMIN
+
+  MS-CATALOGO (8081)
+  ──────────────────
+  GET    /categorias                     Público
+  GET    /categorias/{id}                Público
+  POST   /categorias                     ADMIN
+  PUT    /categorias/{id}                ADMIN
+  DELETE /categorias/{id}                ADMIN
+  GET    /productos                      Público
+  GET    /productos/{id}                 Público
+  GET    /productos/categoria/{id}       Público
+  POST   /productos                      ADMIN  ← body: {"nombre":"...","precio":9990,"stock":5,"categoria":{"id":1}}
+  PUT    /productos/{id}                 ADMIN  ← mismo body que POST
+  PUT    /productos/{id}/stock?cantidad= ADMIN
+  DELETE /productos/{id}                 ADMIN
+
+  MS-SUCURSALES (8086)
+  ────────────────────
+  GET    /sucursales                     Autenticado
+  GET    /sucursales/{id}                Autenticado
+  POST   /sucursales                     ADMIN
+  PUT    /sucursales/{id}                ADMIN
+  DELETE /sucursales/{id}                ADMIN
+
+  MS-CARRITO (8082)
+  ─────────────────
+  GET    /carrito/cliente/{id}                   CLIENTE/ADMIN
+  POST   /carrito/cliente/{id}/agregar           CLIENTE/ADMIN
+  GET    /carrito/cliente/{id}/total-items        CLIENTE/ADMIN
+  DELETE /carrito/item/{itemId}                  CLIENTE/ADMIN
+  DELETE /carrito/cliente/{id}/vaciar            CLIENTE/ADMIN
+
+  MS-REGISTRO-VENTA (8083)
+  ────────────────────────
+  POST   /ventas                         CLIENTE/ADMIN
+  GET    /ventas                         ADMIN
+  GET    /ventas/{id}                    Autenticado
+  GET    /ventas/cliente/{id}            CLIENTE/ADMIN
+  PUT    /ventas/{id}/estado             ADMIN  ← body: {"estado":"ENTREGADO"}
+
+  MS-RESENA (8084)
+  ────────────────
+  POST   /resenas                        CLIENTE/ADMIN  ← requiere venta ENTREGADO
+  GET    /resenas/producto/{id}          Público
+  GET    /resenas/cliente/{id}           CLIENTE/ADMIN
+  DELETE /resenas/{id}                   ADMIN
+
+  MS-ENVIO (8085)
+  ───────────────
+  POST   /envios                         ADMIN
+  GET    /envios/{id}                    Autenticado
+  GET    /envios/venta/{ventaId}         Autenticado
+  GET    /envios/seguimiento/{codigo}    Autenticado
+  GET    /envios/cliente/{id}            CLIENTE/ADMIN
+  PUT    /envios/{id}/estado?estado=     ADMIN
+
+  MS-DESPACHO (8087)
+  ──────────────────
+  POST   /despachos                      ADMIN
+  GET    /despachos/{id}                 Autenticado
+  GET    /despachos/venta/{ventaId}      Autenticado
+  GET    /despachos/sucursal/{id}        Autenticado
+  PUT    /despachos/{id}/estado?estado=  ADMIN
+
+  MS-CERTIFICACION (8088)
+  ───────────────────────
+  POST   /certificados                           ADMIN
+  GET    /certificados/{id}                      Autenticado
+  GET    /certificados/verificar/{codigo}        Autenticado
+  GET    /certificados/despacho/{id}             Autenticado
+  PUT    /certificados/{id}/estado?estado=       ADMIN
+
+────────────────────────────────────────────────────────────────────────────────
+7. ESTADOS VÁLIDOS POR ENTIDAD
+────────────────────────────────────────────────────────────────────────────────
+
+  Venta:         PENDIENTE → PAGADO → ENVIADO → ENTREGADO → CANCELADO
+  Envío:         PREPARANDO → EN_CAMINO → ENTREGADO → DEVUELTO
+  Despacho:      EN_PREPARACION → LISTO → DESPACHADO → ENTREGADO
+  Certificado:   VIGENTE → REVOCADO → VENCIDO
+
+────────────────────────────────────────────────────────────────────────────────
+8. ERRORES COMUNES Y SOLUCIONES
+────────────────────────────────────────────────────────────────────────────────
+
+  Error                              Causa                  Solución
+  ─────────────────────────────────────────────────────────────────────
+  403 en /resenas POST               Venta no ENTREGADO     PUT /ventas/{id}/estado primero
+  400 "carrito vacío" en /ventas     No hay ítems           POST /carrito/agregar primero
+  500 en POST /productos             Body sin categoria     Usar {"categoria":{"id":1}}
+  401 Unauthorized                   Token vencido (24h)    Volver a hacer login
+  409 Conflict en registro           Email duplicado        Usar otro email
+
+================================================================================

@@ -85,7 +85,7 @@ public class EnvioController {
     @PutMapping("/{id}/estado")
     public ResponseEntity<Envio> actualizarEstado(
             @Parameter(description = "ID del envío") @PathVariable Integer id,
-            @RequestBody java.util.Map<String, String> body) {
-        return ResponseEntity.ok(service.actualizarEstado(id, body.get("estado")));
+            @RequestParam String estado) {
+        return ResponseEntity.ok(service.actualizarEstado(id, estado));
     }
 }

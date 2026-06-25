@@ -2,6 +2,7 @@ package com.tienda.catalogo.service;
 
 import com.tienda.catalogo.model.Categoria;
 import com.tienda.catalogo.repository.CategoriaRepository;
+import com.tienda.catalogo.repository.ProductoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -16,9 +17,11 @@ public class CategoriaService {
     private static final Logger log = LoggerFactory.getLogger(CategoriaService.class);
 
     private final CategoriaRepository repository;
+    private final ProductoRepository productoRepository;
 
-    public CategoriaService(CategoriaRepository repository) {
+    public CategoriaService(CategoriaRepository repository, ProductoRepository productoRepository) {
         this.repository = repository;
+        this.productoRepository = productoRepository;
     }
 
     public List<Categoria> listar() {
@@ -53,6 +56,11 @@ public class CategoriaService {
     public void eliminar(Integer id) {
         log.info("Eliminando categoria id: {}", id);
         buscarPorId(id);
+        if (productoRepository.existsByCategoriaId(id)) {
+            log.error("No se puede eliminar categoria id: {} porque tiene productos asociados", id);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede eliminar la categoria porque tiene productos asociados");
+        }
         repository.deleteById(id);
     }
 }

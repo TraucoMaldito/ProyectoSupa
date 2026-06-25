@@ -64,10 +64,12 @@ public class UsuarioService {
 
     private listadoDTO toDTO(Usuario u) {
         listadoDTO dto = new listadoDTO();
+        dto.setId(u.getId());
         dto.setNombre(u.getNombre());
         dto.setApellido(u.getApellido());
         dto.setEmail(u.getEmail());
         dto.setDireccion(u.getDireccion());
+        dto.setRol(u.getRol() != null ? u.getRol().name() : null);
         return dto;
     }
 }

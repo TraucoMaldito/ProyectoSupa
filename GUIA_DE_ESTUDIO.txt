@@ -1,0 +1,488 @@
+================================================================================
+                      GUÍA DE ESTUDIO — PROYECTOSUPA
+             Arquitectura de Microservicios con Spring Boot
+================================================================================
+
+ÍNDICE
+  1. Arquitectura general
+  2. Tecnologías utilizadas
+  3. Cada microservicio explicado
+  4. Spring Boot — conceptos clave
+  5. Seguridad JWT
+  6. Comunicación entre microservicios
+  7. Eureka — Service Discovery
+  8. API Gateway
+  9. Docker y perfiles
+  10. Base de datos y JPA
+  11. Testing unitario
+  12. OpenAPI / Swagger
+  13. Flujo completo de una compra
+
+================================================================================
+1. ARQUITECTURA GENERAL
+================================================================================
+
+El proyecto es un sistema de tienda construido con arquitectura de microservicios.
+En lugar de una sola aplicación monolítica, hay 9 servicios independientes,
+cada uno con su propia base de datos, lógica y API REST.
+
+  ┌─────────────────────────────────────────────────────┐
+  │                    CLIENTE / POSTMAN                 │
+  └──────────────────────┬──────────────────────────────┘
+                         │ HTTP :8090
+  ┌──────────────────────▼──────────────────────────────┐
+  │                   API GATEWAY                        │
+  │         Enruta requests al MS correcto               │
+  └──────────────────────┬──────────────────────────────┘
+                         │
+  ┌──────────────────────▼──────────────────────────────┐
+  │                 EUREKA SERVER :8761                  │
+  │       Registro y descubrimiento de servicios         │
+  └──────────────────────┬──────────────────────────────┘
+                         │ cada MS se registra aquí
+  ┌──────────┬──────────┬┴─────────┬──────────┬─────────┐
+  │  auth    │ catalogo │  carrito │  ventas  │ resena  │
+  │  :8080   │  :8081   │  :8082   │  :8083   │  :8084  │
+  └──────────┴──────────┴──────────┴──────────┴─────────┘
+  ┌──────────┬──────────┬──────────┬──────────┐
+  │  envio   │sucursales│ despacho │  certif. │
+  │  :8085   │  :8086   │  :8087   │  :8088   │
+  └──────────┴──────────┴──────────┴──────────┘
+                         │
+  ┌──────────────────────▼──────────────────────────────┐
+  │                  MySQL :3306                         │
+  │   9 bases de datos separadas (una por MS)            │
+  └─────────────────────────────────────────────────────┘
+
+Principio clave: cada MS es INDEPENDIENTE. Tiene su propio:
+  - Proceso JVM separado
+  - Base de datos propia
+  - Código y despliegue independiente
+
+================================================================================
+2. TECNOLOGÍAS UTILIZADAS
+================================================================================
+
+  Tecnología            Versión   Para qué se usa
+  ────────────────────────────────────────────────────────────────────
+  Java                  17        Lenguaje principal
+  Spring Boot           3.x       Framework base de cada MS
+  Spring Security       6.x       Autenticación y autorización
+  Spring Data JPA       3.x       ORM para base de datos
+  Spring Cloud Eureka   4.x       Registro/descubrimiento de servicios
+  Spring Cloud Gateway  4.x       API Gateway reactivo
+  JWT (jjwt)            0.12      Tokens de autenticación stateless
+  MySQL                 8         Base de datos relacional
+  Hibernate             6.x       Implementación JPA (ORM)
+  Lombok                1.18      Reduce código boilerplate (@Data, @Builder)
+  SpringDoc OpenAPI     2.x       Genera Swagger UI automáticamente
+  Docker                -         Contenedores para despliegue
+  Maven                 3.x       Gestión de dependencias y build
+
+================================================================================
+3. CADA MICROSERVICIO EXPLICADO
+================================================================================
+
+01 MS-AUTENTICACION (:8080)
+  Propósito: Gestionar usuarios y emitir tokens JWT
+  Entidades: Usuario (id, nombre, apellido, email, dirección, contraseña, rol)
+  Roles: ADMIN, OPERADOR, CLIENTE
+  Endpoints clave: POST /auth/login, POST /auth/registro
+  Especial: Único MS con Spring Security completo + UserDetailsService
+             Los demás MS solo VALIDAN el token (no generan)
+
+02 MS-CATALOGO (:8081)
+  Propósito: Gestionar el inventario de productos y categorías
+  Entidades: Categoria, Producto (relación ManyToOne)
+  Especial: Usa DTO (ProductoDTO) para no exponer la entidad directamente
+             Endpoint /productos/{id}/stock reduce stock al venderse
+
+03 MS-SUCURSALES (:8086)
+  Propósito: Gestionar las tiendas físicas
+  Entidades: Sucursal (nombre, dirección, ciudad, horarios)
+  Lo usa: ms-despacho (para saber desde qué sucursal sale el pedido)
+
+04 MS-CARRITO (:8082)
+  Propósito: Carrito de compras temporal por cliente
+  Entidades: Carrito, ItemCarrito (relación OneToMany)
+  Especial: Llama a ms-catalogo para obtener datos del producto
+             Se vacía automáticamente al crear una venta
+
+05 MS-REGISTRO-VENTA (:8083)
+  Propósito: Registrar ventas y sus detalles
+  Entidades: Venta, DetalleVenta
+  Especial: Llama a ms-carrito para obtener los ítems
+             Llama a ms-catalogo para reducir stock
+             Luego vacía el carrito
+
+06 MS-RESENA (:8084)
+  Propósito: Reseñas de productos por clientes
+  Entidades: Resena (clienteId, productoId, calificacion 1-5, comentario)
+  Especial: Valida que el cliente haya comprado el producto (llama ms-ventas)
+             Solo se puede reseñar si la venta está en estado ENTREGADO
+
+07 MS-ENVIO (:8085)
+  Propósito: Gestionar el envío físico de los pedidos
+  Entidades: Envio (ventaId, dirección destino, código seguimiento, estado)
+  Especial: Genera código de seguimiento UUID automáticamente
+
+08 MS-DESPACHO (:8087)
+  Propósito: Coordinar el despacho desde una sucursal
+  Entidades: Despacho (ventaId, sucursalId, operadorId, estado)
+  Lo usa: ms-certificacion (para emitir el certificado del despacho)
+
+09 MS-CERTIFICACION (:8088)
+  Propósito: Emitir certificados de autenticidad
+  Entidades: Certificado (tipo, referenciaId, código verificación, estado)
+  Tipos: DESPACHO, ENTREGA, DEVOLUCION
+  Especial: Código de verificación único, verificable públicamente
+
+================================================================================
+4. SPRING BOOT — CONCEPTOS CLAVE
+================================================================================
+
+@RestController
+  Combina @Controller + @ResponseBody. Todos los métodos retornan JSON
+  automáticamente.
+
+@RequestMapping, @GetMapping, @PostMapping, @PutMapping, @DeleteMapping
+  Mapean URLs HTTP a métodos Java.
+  Ejemplo: @GetMapping("/productos/{id}") → GET /productos/5
+
+@PathVariable vs @RequestParam vs @RequestBody
+  @PathVariable  → parte de la URL:   /envios/{id}/estado  → Integer id
+  @RequestParam  → query string:      /envios/1/estado?estado=LISTO
+  @RequestBody   → cuerpo JSON:       {"estado": "LISTO"}
+
+ResponseEntity<T>
+  Permite controlar el HTTP status code y el cuerpo de la respuesta.
+  Ejemplos:
+    ResponseEntity.ok(objeto)              → 200 OK
+    ResponseEntity.status(201).body(obj)   → 201 Created
+    ResponseEntity.notFound().build()      → 404 Not Found
+
+@Valid + @NotNull, @NotBlank, @Min, @Max
+  Validación automática del body recibido. Si falla → 400 Bad Request.
+
+@Service, @Repository, @Component
+  Stereotypes de Spring para inyección de dependencias.
+  Spring los detecta automáticamente con component scan.
+
+@Value("${jwt.secret}")
+  Inyecta valores del application.yml en campos Java.
+
+ResponseStatusException
+  Forma moderna de lanzar errores HTTP con mensaje:
+    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe")
+
+@RestControllerAdvice (GlobalExceptionHandler)
+  Captura todas las excepciones del sistema y retorna respuestas JSON
+  consistentes en lugar de errores HTML.
+
+================================================================================
+5. SEGURIDAD JWT
+================================================================================
+
+¿Qué es JWT?
+  JSON Web Token: un string codificado en Base64 con 3 partes:
+    Header.Payload.Signature
+    eyJhbGci... . eyJzdWIi... . [firma]
+
+  El Payload contiene: email, rol, fecha expiración (24 horas)
+  La Signature garantiza que el token no fue modificado
+
+Flujo de autenticación:
+  1. Cliente envía email + contraseña a POST /auth/login
+  2. Spring verifica credenciales con AuthenticationManager
+  3. Si correctas → JwtUtil.generateToken(email, rol) → devuelve token
+  4. Cliente guarda el token y lo envía en cada request:
+       Header: Authorization: Bearer eyJhbGci...
+  5. JwtAuthFilter intercepta cada request, valida el token
+  6. Si válido → crea Authentication en SecurityContext
+  7. Spring Security verifica roles (@hasRole) para autorizar
+
+JwtAuthFilter (OncePerRequestFilter)
+  Se ejecuta en cada request HTTP antes del controlador.
+  Extrae el token del header, lo valida, y si es válido crea
+  el contexto de seguridad con el email y rol del usuario.
+
+  Clave: en ms-autenticacion el filter usa UserDetailsService (busca en DB).
+         En los otros 8 MS el filter solo decodifica el JWT (stateless).
+
+hasRole("ADMIN") vs hasAnyRole("CLIENTE","ADMIN")
+  Spring prefija automáticamente ROLE_ internamente.
+  El token guarda "ADMIN" → el filter crea ROLE_ADMIN → hasRole("ADMIN") ✓
+
+================================================================================
+6. COMUNICACIÓN ENTRE MICROSERVICIOS
+================================================================================
+
+Patrón usado: REST HTTP directo con RestTemplate
+
+Ejemplo — ms-registro-venta llama a ms-carrito:
+
+    @Value("${carrito.url}")
+    private String carritoUrl;  // "http://localhost:8082" (local)
+                                // "http://ms-carrito:8082" (docker)
+
+    CarritoResponse carrito = restTemplate.getForObject(
+        carritoUrl + "/carrito/cliente/" + clienteId,
+        CarritoResponse.class
+    );
+
+El URL cambia según el perfil:
+  - Local (default): usa localhost
+  - Docker (profile=docker): usa el nombre del contenedor (ms-carrito)
+
+Dependencias entre MS (quién llama a quién):
+  carrito     → catalogo    (obtiene nombre/precio del producto)
+  ventas      → carrito     (lee y vacía el carrito)
+  ventas      → catalogo    (reduce stock)
+  resena      → ventas      (verifica que el cliente compró)
+  certificacion → despacho  (valida el despacho) [implícito por ID]
+
+================================================================================
+7. EUREKA — SERVICE DISCOVERY
+================================================================================
+
+Problema que resuelve: ¿Cómo sabe el Gateway dónde está cada MS?
+  En desarrollo: todos en localhost. En producción: IPs dinámicas.
+
+Cómo funciona:
+  1. Eureka Server arranca en :8761 (el "directorio")
+  2. Cada MS se registra al iniciar:
+       eureka.client.register-with-eureka: true
+  3. Cada MS puede consultar el directorio:
+       eureka.client.fetch-registry: true
+  4. El Gateway usa lb://MS-CATALOGO → Eureka resuelve la IP real
+
+Dashboard: http://localhost:8761
+  Muestra todos los MS registrados, su estado y IP.
+
+application.yml relevante en cada MS:
+  eureka:
+    client:
+      service-url:
+        defaultZone: http://localhost:8761/eureka/   ← local
+        defaultZone: http://eureka-server:8761/eureka/ ← docker
+    instance:
+      instance-id: ${spring.application.name}:${server.port}
+
+================================================================================
+8. API GATEWAY
+================================================================================
+
+Actúa como punto de entrada único. El cliente llama a :8090 y el Gateway
+enruta al MS correcto sin que el cliente sepa los puertos internos.
+
+Configuración en application.yml:
+  spring.cloud.gateway.server.webflux.routes:
+    - id: ruta-catalogo
+      uri: lb://MS-CATALOGO       ← usa Eureka para resolver
+      predicates:
+        - Path=/categorias/**,/productos/**   ← qué URLs enruta aquí
+
+Ejemplo: GET http://localhost:8090/productos → ms-catalogo :8081
+
+Ventajas del Gateway:
+  - Un solo punto de entrada (firewall más simple)
+  - Puede agregar autenticación centralizada (no implementado aquí)
+  - Load balancing automático si hay múltiples instancias
+
+Diferencia con Nginx/proxy reverso:
+  El Gateway de Spring Cloud entiende Eureka (service discovery dinámico).
+  Nginx requiere IPs fijas en su configuración.
+
+================================================================================
+9. DOCKER Y PERFILES DE SPRING
+================================================================================
+
+Docker Multistage Build (en cada Dockerfile)
+  Stage 1 (build):   imagen Maven → compila el proyecto → genera .jar
+  Stage 2 (runtime): imagen JRE liviana → copia solo el .jar → lo ejecuta
+
+  Ventaja: imagen final pequeña (no incluye Maven ni código fuente).
+
+docker-compose.yml
+  Define todos los servicios, sus dependencias y variables de entorno.
+  depends_on con healthcheck asegura que MySQL esté listo antes de los MS.
+
+Spring Profiles
+  Permiten tener configuraciones diferentes por ambiente.
+
+  En application.yml, el perfil docker se activa con ---:
+
+    # Perfil default (desarrollo local)
+    spring.datasource.url: jdbc:mysql://localhost:3306/db_auth
+
+    ---
+    spring:
+      config:
+        activate:
+          on-profile: docker
+    spring.datasource.url: jdbc:mysql://mysql:3306/db_auth  ← nombre contenedor
+
+  En docker-compose.yml se activa el perfil:
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  Las variables de entorno SIEMPRE sobreescriben el YAML:
+    SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/db_auth
+    EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+
+================================================================================
+10. BASE DE DATOS Y JPA
+================================================================================
+
+Patrón: Database per Service
+  Cada MS tiene su propia base de datos. Nunca comparten tablas.
+  ms-autenticacion → db_auth
+  ms-catalogo      → db_catalogo
+  ms-carrito       → db_carrito
+  ... etc
+
+  Ventaja: cambiar el esquema de un MS no afecta a los demás.
+
+JPA Annotations clave:
+  @Entity          → esta clase es una tabla en la BD
+  @Table(name="")  → nombre de la tabla (si difiere del nombre de clase)
+  @Id              → clave primaria
+  @GeneratedValue(strategy = GenerationType.IDENTITY)  → autoincrement
+  @Column(nullable = false, length = 100)  → restricciones de columna
+  @ManyToOne       → relación N:1 (Producto tiene una Categoria)
+  @OneToMany       → relación 1:N (Carrito tiene muchos ItemCarrito)
+  @JoinColumn      → define la columna de FK
+
+ddl-auto: update
+  Spring crea/actualiza las tablas automáticamente al iniciar.
+  En producción real se usa "validate" o migraciones Flyway/Liquibase.
+
+DataLoader (@Component + CommandLineRunner)
+  Se ejecuta al iniciar la app. Carga datos iniciales si la BD está vacía:
+  usuarios de prueba, categorías, productos, sucursales.
+
+================================================================================
+11. TESTING UNITARIO
+================================================================================
+
+Tipo de tests usados: @WebMvcTest (test de capa web sin levantar la BD)
+
+Anotaciones clave:
+  @WebMvcTest(MiController.class)   → carga solo ese controlador
+  @MockitoBean                       → crea un mock del Service (no BD real)
+  @Autowired MockMvc                 → cliente HTTP simulado para tests
+
+Estructura de un test:
+  @Test
+  void obtenerProducto_retorna200() throws Exception {
+      // 1. Define qué retorna el mock del service
+      when(service.buscarPorId(1)).thenReturn(producto);
+
+      // 2. Simula la llamada HTTP
+      mockMvc.perform(get("/productos/1")
+              .header("Authorization", "Bearer " + token))
+          // 3. Verifica el resultado
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.nombre").value("Laptop"));
+  }
+
+Por qué @WebMvcTest y no @SpringBootTest:
+  @SpringBootTest levanta toda la aplicación (lento, necesita BD).
+  @WebMvcTest solo levanta la capa HTTP (rápido, usa mocks para todo lo demás).
+
+Patrón de seguridad en tests:
+  Los tests generan un JWT real con JwtUtil para simular usuarios
+  autenticados, porque el JwtAuthFilter está activo incluso en @WebMvcTest.
+
+================================================================================
+12. OPENAPI / SWAGGER
+================================================================================
+
+SpringDoc genera automáticamente la documentación desde el código.
+
+Annotations en controladores:
+  @Tag(name="Productos")            → agrupa endpoints en Swagger
+  @Operation(summary="...")         → describe qué hace el endpoint
+  @ApiResponse(responseCode="200")  → documenta posibles respuestas
+  @Parameter(description="...")     → describe un parámetro
+
+Annotations en modelos:
+  @Schema(description="...", example="...") → documenta cada campo
+  @Schema(accessMode=READ_ONLY)             → campo solo en respuesta
+  @Schema(allowableValues={...})            → enum de valores válidos
+
+OpenApiConfig (clase en cada MS):
+  Configura el título, versión y el esquema de seguridad BearerAuth.
+  Esto habilita el botón "Authorize" en Swagger UI.
+
+URLs importantes:
+  /swagger-ui.html    → interfaz visual interactiva
+  /v3/api-docs        → JSON con toda la especificación OpenAPI 3.0
+
+================================================================================
+13. FLUJO COMPLETO DE UNA COMPRA (integración entre MS)
+================================================================================
+
+  CLIENTE                                    MICROSERVICIOS
+  ───────                                    ──────────────
+
+  1. POST /auth/login ─────────────────────→ ms-autenticacion
+                                               ↓ verifica BD
+                      ←───────── JWT token ──
+
+  2. GET /productos ───────────────────────→ ms-catalogo (sin auth)
+                    ←────── lista productos
+
+  3. POST /carrito/cliente/6/agregar ──────→ ms-carrito
+                                               ↓ llama ms-catalogo
+                                               ↓ guarda item + precio
+                    ←────── carrito actualizado
+
+  4. POST /ventas {"clienteId":6} ─────────→ ms-registro-venta
+                                               ↓ llama ms-carrito (lee ítems)
+                                               ↓ llama ms-catalogo (reduce stock)
+                                               ↓ guarda Venta + DetalleVenta
+                                               ↓ llama ms-carrito (vacía carrito)
+                    ←────── Venta creada (id, total, detalles)
+
+  5. PUT /ventas/{id}/estado ENTREGADO ────→ ms-registro-venta
+                                               ↓ actualiza estado
+
+  6. POST /resenas ────────────────────────→ ms-resena
+                                               ↓ llama ms-ventas (verifica ENTREGADO)
+                                               ↓ guarda reseña
+                    ←────── Reseña creada
+
+  7. POST /envios ─────────────────────────→ ms-envio
+                                               ↓ genera código seguimiento UUID
+                    ←────── Envío + código
+
+  8. POST /despachos ──────────────────────→ ms-despacho
+                                               ↓ asigna sucursal + operador
+                    ←────── Despacho creado
+
+  9. POST /certificados ───────────────────→ ms-certificacion
+                                               ↓ genera código verificación
+                    ←────── Certificado + código único
+
+  10. GET /certificados/verificar/{codigo} → ms-certificacion
+                    ←────── Certificado válido ✓
+
+================================================================================
+RESUMEN DE PATRONES DE DISEÑO APLICADOS
+================================================================================
+
+  Patrón                  Dónde se usa
+  ──────────────────────────────────────────────────────────────
+  Microservicios          Arquitectura general (9 MS independientes)
+  API Gateway             Punto de entrada único (Spring Cloud Gateway)
+  Service Registry        Eureka como directorio de servicios
+  DTO Pattern             ProductoDTO, listadoDTO (ocultan campos sensibles)
+  Repository Pattern      JPA Repositories (CrudRepository/JpaRepository)
+  Filter Chain            JwtAuthFilter en cada MS
+  Global Exception Handler @RestControllerAdvice centraliza errores
+  Database per Service    Cada MS con su propia BD
+  Circuit Breaker         No implementado (mejora futura)
+  Event-Driven            No implementado (mejora futura con Kafka)
+
+================================================================================

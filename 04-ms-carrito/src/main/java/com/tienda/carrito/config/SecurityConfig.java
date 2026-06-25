@@ -30,6 +30,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/carrito/cliente/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/carrito/cliente/*/vaciar").permitAll()
                         .requestMatchers("/carrito/**").hasAnyRole("CLIENTE", "ADMIN")
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

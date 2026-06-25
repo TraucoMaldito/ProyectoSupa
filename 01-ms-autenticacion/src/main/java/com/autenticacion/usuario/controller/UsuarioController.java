@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -47,7 +48,8 @@ public class UsuarioController {
     @PostMapping("/agregar")
     public ResponseEntity<listadoDTO> agregar(@Valid @RequestBody Usuario nuevo) {
         if (service.existePorEmail(nuevo.getEmail())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "El email ya está registrado");
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(service.guardarUsuario(nuevo));
     }
@@ -60,12 +62,10 @@ public class UsuarioController {
     @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<String> eliminar(
             @Parameter(description = "ID del usuario a eliminar") @PathVariable Integer id) {
-        return service.buscarPorId(id)
-                .map(u -> {
-                    service.eliminarUsuario(id);
-                    return ResponseEntity.ok("Usuario eliminado correctamente");
-                })
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Usuario con id " + id + " no encontrado"));
+        service.buscarPorId(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Usuario con id " + id + " no encontrado"));
+        service.eliminarUsuario(id);
+        return ResponseEntity.ok("Usuario eliminado correctamente");
     }
 }
